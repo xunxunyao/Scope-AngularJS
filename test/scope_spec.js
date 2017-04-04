@@ -54,6 +54,45 @@ describe('Scope',function () {
             scope.$digest();
             expect(scope.counter).toBe(2);
         });
-
+        it("calls listener when watch value is first undefined", function() {
+            //监视器第一次执行的时候last是undefined，someValue的值也是undefined，会有问题
+            //todo 我们需要做的事情是将last属性初始化一个独有的值，这个值要和监视函数可能返回的值都不同。--initWatchVal
+            scope.counter = 0;
+            scope.$watch(
+                function(scope) { return scope.someValue; },
+                function(newValue, oldValue, scope) { scope.counter++; }
+            );
+            scope.$digest();
+            expect(scope.counter).toBe(1);
+        });
+        it("may have watchers that omit the listener function", function() {
+            //每次$digest时获得通知，注册一个没有listenerFn的$watch
+            var watchFn = jasmine.createSpy().and.returnValue('something');
+            scope.$watch(watchFn);
+            scope.$digest();
+            expect(watchFn).toHaveBeenCalled();
+        });
+        it("triggers chained watchers in the same digest", function() {
+            scope.name = 'Jane';
+            scope.$watch(
+                function(scope) { return scope.nameUpper; },
+                function(newValue, oldValue, scope) {
+                    if (newValue) {
+                        scope.initial = newValue.substring(0, 1) + '.';
+                    } }
+            );
+            scope.$watch(
+                function(scope) { return scope.name; },
+                function(newValue, oldValue, scope) {
+                    if (newValue) {
+                        scope.nameUpper = newValue.toUpperCase();
+                    } }
+            );
+            scope.$digest();
+            expect(scope.initial).toBe('J.');
+            scope.name = 'Bob';
+            scope.$digest();
+            expect(scope.initial).toBe('B.');
+        });
     })
 });
